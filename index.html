@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>페이커와 함께하는 점찍기</title>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    :root {
+      --background: #f4f6f8;
+      --panel: #ffffff;
+      --text: #181818;
+      --sub-text: #666666;
+      --border: #d7dce2;
+      --grid: #dddddd;
+      --axis: #000000;
+      --correct: #1769e0;
+      --wrong: #e03232;
+      --button: #111111;
+      --button-hover: #333333;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 24px;
+      background: var(--background);
+      color: var(--text);
+      font-family: Pretendard, "Noto Sans KR", Arial, sans-serif;
+    }
+
+    button { font: inherit; }
+
+    .game-container {
+      width: min(100%, 900px);
+      margin: 0 auto;
+    }
+
+    .game-header {
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .game-header h1 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 5vw, 42px);
+    }
+
+    .game-header p {
+      margin: 0;
+      color: var(--sub-text);
+      font-size: 16px;
+    }
+
+    .game-panel {
+      padding: 24px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--panel);
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.07);
+    }
+
+    .question-area {
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      border-radius: 14px;
+      background: #f5f7fa;
+      text-align: center;
+    }
+
+    #questionText {
+      margin: 0;
+      font-size: clamp(20px, 4vw, 30px);
+      font-weight: 700;
+    }
+
+    .ordered-pair {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 1.15em;
+    }
+
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin: 16px 0;
+    }
+
+    .status-item {
+      padding: 12px 8px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #ffffff;
+      text-align: center;
+    }
+
+    .status-label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--sub-text);
+      font-size: 13px;
+    }
+
+    .status-value {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    #timeValue.warning { color: var(--wrong); }
+
+    .canvas-wrap {
+      position: relative;
+      width: min(100%, 700px);
+      margin: 0 auto;
+      touch-action: manipulation;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      border: 1px solid #eeeeee;
+      background: #ffffff;
+      cursor: crosshair;
+    }
+
+    canvas.disabled {
+      cursor: default;
+      opacity: 0.96;
+    }
+
+    .feedback {
+      min-height: 34px;
+      margin-top: 12px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .feedback.correct { color: var(--correct); }
+    .feedback.wrong { color: var(--wrong); }
+
+    .result-panel {
+      display: none;
+      margin-top: 20px;
+      padding: 24px;
+      border-radius: 16px;
+      background: #f5f7fa;
+      text-align: center;
+    }
+
+    .result-panel.visible { display: block; }
+
+    .result-panel h2 {
+      margin: 0 0 10px;
+      font-size: 28px;
+    }
+
+    .final-score {
+      margin: 0 0 18px;
+      font-size: 42px;
+      font-weight: 800;
+    }
+
+    .restart-button {
+      min-width: 180px;
+      padding: 13px 24px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--button);
+      color: #ffffff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .restart-button:hover { background: var(--button-hover); }
+
+    .leaderboard {
+      margin-top: 22px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--panel);
+    }
+
+    .leaderboard-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .leaderboard h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .reset-record-button {
+      padding: 7px 11px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #ffffff;
+      color: var(--sub-text);
+      cursor: pointer;
+    }
+
+    .reset-record-button:hover { background: #f1f1f1; }
+
+    .leaderboard-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .leaderboard-item {
+      display: grid;
+      grid-template-columns: 50px 1fr 100px;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 8px;
+      border-bottom: 1px solid #eeeeee;
+    }
+
+    .leaderboard-item:last-child { border-bottom: 0; }
+    .rank { font-weight: 800; }
+
+    .record-date {
+      color: var(--sub-text);
+      font-size: 14px;
+    }
+
+    .record-score {
+      text-align: right;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .empty-record {
+      padding: 20px 0;
+      color: var(--sub-text);
+      text-align: center;
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 12px; }
+
+      .game-panel {
+        padding: 14px;
+        border-radius: 14px;
+      }
+
+      .status-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .leaderboard-item {
+        grid-template-columns: 40px 1fr 80px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="game-container">
+    <header class="game-header">
+      <h1>페이커와 함께하는 점찍기</h1>
+      <p>제시된 순서쌍에 해당하는 격자점을 정확하게 눌러 보세요.</p>
+    </header>
+
+    <section class="game-panel">
+      <div class="question-area">
+        <p id="questionText">게임을 준비하고 있습니다.</p>
+      </div>
+
+      <div class="status-grid">
+        <div class="status-item">
+          <span class="status-label">남은 시간</span>
+          <strong class="status-value" id="timeValue">10.0초</strong>
+        </div>
+        <div class="status-item">
+          <span class="status-label">현재 문제</span>
+          <strong class="status-value" id="currentValue">1 / 10</strong>
+        </div>
+        <div class="status-item">
+          <span class="status-label">누적 점수</span>
+          <strong class="status-value" id="scoreValue">0점</strong>
+        </div>
+        <div class="status-item">
+          <span class="status-label">남은 문제</span>
+          <strong class="status-value" id="remainingValue">10문제</strong>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas
+          id="coordinatePlane"
+          width="760"
+          height="760"
+          aria-label="점 찍기 활동을 위한 좌표평면"
+        ></canvas>
+      </div>
+
+      <div id="feedback" class="feedback" aria-live="polite"></div>
+
+      <section id="resultPanel" class="result-panel">
+        <h2>게임 완료!</h2>
+        <p>최종 점수</p>
+        <p id="finalScore" class="final-score">0점</p>
+        <button type="button" id="restartButton" class="restart-button">
+          다시 게임하기
+        </button>
+      </section>
+    </section>
+
+    <section class="leaderboard">
+      <div class="leaderboard-header">
+        <h2>리더보드</h2>
+        <button type="button" id="resetRecordButton" class="reset-record-button">
+          기록 초기화
+        </button>
+      </div>
+      <ol id="leaderboardList" class="leaderboard-list"></ol>
+    </section>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("coordinatePlane");
+    const ctx = canvas.getContext("2d");
+
+    const questionText = document.getElementById("questionText");
+    const timeValue = document.getElementById("timeValue");
+    const currentValue = document.getElementById("currentValue");
+    const scoreValue = document.getElementById("scoreValue");
+    const remainingValue = document.getElementById("remainingValue");
+    const feedback = document.getElementById("feedback");
+    const resultPanel = document.getElementById("resultPanel");
+    const finalScore = document.getElementById("finalScore");
+    const restartButton = document.getElementById("restartButton");
+    const leaderboardList = document.getElementById("leaderboardList");
+    const resetRecordButton = document.getElementById("resetRecordButton");
+
+    const TOTAL_QUESTIONS = 10;
+    const TIME_LIMIT = 10;
+    const FEEDBACK_DURATION = 2000;
+    const QUESTION_MIN = -9;
+    const QUESTION_MAX = 9;
+    const LEADERBOARD_KEY = "pointPlottingLeaderboard";
+
+    const MIN = -10;
+    const MAX = 10;
+    const PADDING = 45;
+    const GRAPH_SIZE = canvas.width - PADDING * 2;
+    const UNIT = GRAPH_SIZE / (MAX - MIN);
+
+    const BACKGROUND_COLOR = "#ffffff";
+    const GRID_COLOR = "#dddddd";
+    const AXIS_COLOR = "#000000";
+    const TEXT_COLOR = "#000000";
+    const CORRECT_COLOR = "#1769e0";
+    const WRONG_COLOR = "#e03232";
+
+    const GRID_WIDTH = 1;
+    const AXIS_WIDTH = 2.7;
+
+    let questions = [];
+    let currentQuestionIndex = 0;
+    let totalScore = 0;
+    let questionStartTime = 0;
+    let timerAnimationId = null;
+    let acceptingAnswer = false;
+    let gameFinished = false;
+    let selectedPoint = null;
+    let correctPointToShow = null;
+
+    function toCanvasX(x) {
+      return PADDING + (x - MIN) * UNIT;
+    }
+
+    function toCanvasY(y) {
+      return PADDING + (MAX - y) * UNIT;
+    }
+
+    function crisp(value) {
+      return Math.round(value) + 0.5;
+    }
+
+    function drawBackground() {
+      ctx.fillStyle = BACKGROUND_COLOR;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawGrid() {
+      ctx.save();
+      ctx.strokeStyle = GRID_COLOR;
+      ctx.lineWidth = GRID_WIDTH;
+
+      for (let x = MIN; x <= MAX; x++) {
+        const px = crisp(toCanvasX(x));
+        ctx.beginPath();
+        ctx.moveTo(px, toCanvasY(MAX));
+        ctx.lineTo(px, toCanvasY(MIN));
+        ctx.stroke();
+      }
+
+      for (let y = MIN; y <= MAX; y++) {
+        const py = crisp(toCanvasY(y));
+        ctx.beginPath();
+        ctx.moveTo(toCanvasX(MIN), py);
+        ctx.lineTo(toCanvasX(MAX), py);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function drawGridBorder() {
+      ctx.save();
+      ctx.strokeStyle = GRID_COLOR;
+      ctx.lineWidth = GRID_WIDTH;
+      ctx.strokeRect(
+        crisp(toCanvasX(MIN)),
+        crisp(toCanvasY(MAX)),
+        GRAPH_SIZE,
+        GRAPH_SIZE
+      );
+      ctx.restore();
+    }
+
+    function drawArrowHead(tipX, tipY, angle) {
+      const arrowLength = 12;
+      const arrowAngle = Math.PI / 6;
+
+      ctx.beginPath();
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(
+        tipX - arrowLength * Math.cos(angle - arrowAngle),
+        tipY - arrowLength * Math.sin(angle - arrowAngle)
+      );
+      ctx.moveTo(tipX, tipY);
+      ctx.lineTo(
+        tipX - arrowLength * Math.cos(angle + arrowAngle),
+        tipY - arrowLength * Math.sin(angle + arrowAngle)
+      );
+      ctx.stroke();
+    }
+
+    function drawAxes() {
+      const originX = toCanvasX(0);
+      const originY = toCanvasY(0);
+      const xArrowTip = toCanvasX(MAX);
+      const yArrowTip = toCanvasY(MAX);
+
+      ctx.save();
+      ctx.strokeStyle = AXIS_COLOR;
+      ctx.lineWidth = AXIS_WIDTH;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.beginPath();
+      ctx.moveTo(toCanvasX(MIN), originY);
+      ctx.lineTo(xArrowTip, originY);
+      ctx.stroke();
+      drawArrowHead(xArrowTip, originY, 0);
+
+      ctx.beginPath();
+      ctx.moveTo(originX, toCanvasY(MIN));
+      ctx.lineTo(originX, yArrowTip);
+      ctx.stroke();
+      drawArrowHead(originX, yArrowTip, -Math.PI / 2);
+
+      ctx.restore();
+    }
+
+    function drawXAxisNumbers() {
+      const originY = toCanvasY(0);
+
+      ctx.save();
+      ctx.fillStyle = TEXT_COLOR;
+      ctx.font = '16px "Times New Roman", Times, serif';
+      ctx.textAlign = "center";
+      ctx.textBaseline = "top";
+
+      for (let x = -9; x <= 9; x++) {
+        if (x === 0) continue;
+        ctx.fillText(String(x), toCanvasX(x), originY + 8);
+      }
+
+      ctx.restore();
+    }
+
+    function drawYAxisNumbers() {
+      const originX = toCanvasX(0);
+
+      ctx.save();
+      ctx.fillStyle = TEXT_COLOR;
+      ctx.font = '16px "Times New Roman", Times, serif';
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+
+      for (let y = -9; y <= 9; y++) {
+        if (y === 0) continue;
+        ctx.fillText(String(y), originX - 8, toCanvasY(y));
+      }
+
+      ctx.restore();
+    }
+
+    function drawOriginLabel() {
+      const originX = toCanvasX(0);
+      const originY = toCanvasY(0);
+
+      ctx.save();
+      ctx.fillStyle = TEXT_COLOR;
+      ctx.font = '17px "Times New Roman", Times, serif';
+      ctx.textAlign = "right";
+      ctx.textBaseline = "top";
+      ctx.fillText("O", originX - 7, originY + 7);
+      ctx.restore();
+    }
+
+    function drawAxisLabels() {
+      ctx.save();
+      ctx.fillStyle = TEXT_COLOR;
+      ctx.font = 'italic 21px "Times New Roman", Times, serif';
+      ctx.textAlign = "right";
+      ctx.textBaseline = "top";
+      ctx.fillText("x", toCanvasX(MAX) - 5, toCanvasY(0) + 12);
+      ctx.fillText("y", toCanvasX(0) - 10, toCanvasY(MAX) + 5);
+      ctx.restore();
+    }
+
+    function drawPoint(point, color) {
+      if (!point) return;
+
+      const px = toCanvasX(point.x);
+      const py = toCanvasY(point.y);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(px, py, 8, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawCoordinatePlane() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawBackground();
+      drawGrid();
+      drawGridBorder();
+      drawAxes();
+      drawXAxisNumbers();
+      drawYAxisNumbers();
+      drawOriginLabel();
+      drawAxisLabels();
+
+      if (selectedPoint) drawPoint(selectedPoint, selectedPoint.color);
+      if (correctPointToShow) drawPoint(correctPointToShow, CORRECT_COLOR);
+    }
+
+    function randomInteger(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function createQuestions() {
+      const generated = [];
+      const used = new Set();
+
+      while (generated.length < TOTAL_QUESTIONS) {
+        const x = randomInteger(QUESTION_MIN, QUESTION_MAX);
+        const y = randomInteger(QUESTION_MIN, QUESTION_MAX);
+        const key = `${x},${y}`;
+
+        if (used.has(key)) continue;
+
+        used.add(key);
+        generated.push({ x, y });
+      }
+
+      return generated;
+    }
+
+    function startGame() {
+      cancelAnimationFrame(timerAnimationId);
+
+      questions = createQuestions();
+      currentQuestionIndex = 0;
+      totalScore = 0;
+      acceptingAnswer = false;
+      gameFinished = false;
+      selectedPoint = null;
+      correctPointToShow = null;
+
+      feedback.textContent = "";
+      feedback.className = "feedback";
+      resultPanel.classList.remove("visible");
+      canvas.classList.remove("disabled");
+
+      updateStatus(TIME_LIMIT);
+      startQuestion();
+    }
+
+    function startQuestion() {
+      if (currentQuestionIndex >= TOTAL_QUESTIONS) {
+        finishGame();
+        return;
+      }
+
+      selectedPoint = null;
+      correctPointToShow = null;
+      feedback.textContent = "";
+      feedback.className = "feedback";
+
+      const question = questions[currentQuestionIndex];
+
+      questionText.innerHTML =
+        `점 <span class="ordered-pair">(${question.x}, ${question.y})</span>를 좌표평면에 찍으세요.`;
+
+      acceptingAnswer = true;
+      canvas.classList.remove("disabled");
+      questionStartTime = performance.now();
+
+      drawCoordinatePlane();
+      updateStatus(TIME_LIMIT);
+      runTimer();
+    }
+
+    function runTimer() {
+      cancelAnimationFrame(timerAnimationId);
+
+      function updateTimer(now) {
+        if (!acceptingAnswer || gameFinished) return;
+
+        const elapsedSeconds = (now - questionStartTime) / 1000;
+        const remainingSeconds = Math.max(0, TIME_LIMIT - elapsedSeconds);
+
+        updateStatus(remainingSeconds);
+
+        if (remainingSeconds <= 0) {
+          handleTimeout();
+          return;
+        }
+
+        timerAnimationId = requestAnimationFrame(updateTimer);
+      }
+
+      timerAnimationId = requestAnimationFrame(updateTimer);
+    }
+
+    function updateStatus(remainingSeconds) {
+      const displayedTime = Math.max(0, remainingSeconds).toFixed(1);
+      timeValue.textContent = `${displayedTime}초`;
+
+      if (remainingSeconds <= 3) {
+        timeValue.classList.add("warning");
+      } else {
+        timeValue.classList.remove("warning");
+      }
+
+      const displayedQuestion = Math.min(
+        currentQuestionIndex + 1,
+        TOTAL_QUESTIONS
+      );
+
+      currentValue.textContent = `${displayedQuestion} / ${TOTAL_QUESTIONS}`;
+      scoreValue.textContent = `${totalScore}점`;
+
+      const remainingQuestions = Math.max(
+        0,
+        TOTAL_QUESTIONS - currentQuestionIndex
+      );
+
+      remainingValue.textContent = `${remainingQuestions}문제`;
+    }
+
+    function getRemainingTime() {
+      const elapsed = (performance.now() - questionStartTime) / 1000;
+      return Math.max(0, TIME_LIMIT - elapsed);
+    }
+
+    function calculateScore(remainingTime) {
+      return Math.floor(remainingTime * 10);
+    }
+
+    function getClickedCoordinate(event) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
+      const canvasMouseX = (event.clientX - rect.left) * scaleX;
+      const canvasMouseY = (event.clientY - rect.top) * scaleY;
+
+      const mathX = MIN + (canvasMouseX - PADDING) / UNIT;
+      const mathY = MAX - (canvasMouseY - PADDING) / UNIT;
+
+      const roundedX = Math.round(mathX);
+      const roundedY = Math.round(mathY);
+
+      if (
+        roundedX < QUESTION_MIN ||
+        roundedX > QUESTION_MAX ||
+        roundedY < QUESTION_MIN ||
+        roundedY > QUESTION_MAX
+      ) {
+        return null;
+      }
+
+      const clickedPointX = toCanvasX(roundedX);
+      const clickedPointY = toCanvasY(roundedY);
+
+      const distance = Math.hypot(
+        canvasMouseX - clickedPointX,
+        canvasMouseY - clickedPointY
+      );
+
+      const clickableRadius = UNIT * 0.43;
+
+      if (distance > clickableRadius) return null;
+
+      return { x: roundedX, y: roundedY };
+    }
+
+    function handleCanvasClick(event) {
+      if (!acceptingAnswer || gameFinished) return;
+
+      const clickedPoint = getClickedCoordinate(event);
+      if (!clickedPoint) return;
+
+      acceptingAnswer = false;
+      canvas.classList.add("disabled");
+      cancelAnimationFrame(timerAnimationId);
+
+      const correctAnswer = questions[currentQuestionIndex];
+
+      const isCorrect =
+        clickedPoint.x === correctAnswer.x &&
+        clickedPoint.y === correctAnswer.y;
+
+      if (isCorrect) {
+        handleCorrectAnswer(clickedPoint);
+      } else {
+        handleWrongAnswer(clickedPoint, correctAnswer);
+      }
+    }
+
+    function handleCorrectAnswer(clickedPoint) {
+      const remainingTime = getRemainingTime();
+      const earnedScore = calculateScore(remainingTime);
+
+      totalScore += earnedScore;
+
+      selectedPoint = {
+        ...clickedPoint,
+        color: CORRECT_COLOR
+      };
+
+      correctPointToShow = null;
+      feedback.textContent = `정답입니다! ${earnedScore}점을 얻었습니다.`;
+      feedback.className = "feedback correct";
+
+      updateStatus(remainingTime);
+      drawCoordinatePlane();
+      moveToNextQuestionAfterDelay();
+    }
+
+    function handleWrongAnswer(clickedPoint, correctAnswer) {
+      selectedPoint = {
+        ...clickedPoint,
+        color: WRONG_COLOR
+      };
+
+      correctPointToShow = { ...correctAnswer };
+
+      feedback.textContent =
+        `오답입니다. 정답은 (${correctAnswer.x}, ${correctAnswer.y})입니다.`;
+
+      feedback.className = "feedback wrong";
+
+      updateStatus(getRemainingTime());
+      drawCoordinatePlane();
+      moveToNextQuestionAfterDelay();
+    }
+
+    function handleTimeout() {
+      if (!acceptingAnswer) return;
+
+      acceptingAnswer = false;
+      canvas.classList.add("disabled");
+      cancelAnimationFrame(timerAnimationId);
+
+      const correctAnswer = questions[currentQuestionIndex];
+
+      selectedPoint = null;
+      correctPointToShow = { ...correctAnswer };
+
+      timeValue.textContent = "0.0초";
+      timeValue.classList.add("warning");
+
+      feedback.textContent =
+        `시간 초과! 정답은 (${correctAnswer.x}, ${correctAnswer.y})입니다.`;
+
+      feedback.className = "feedback wrong";
+
+      drawCoordinatePlane();
+      moveToNextQuestionAfterDelay();
+    }
+
+    function moveToNextQuestionAfterDelay() {
+      window.setTimeout(() => {
+        currentQuestionIndex += 1;
+        startQuestion();
+      }, FEEDBACK_DURATION);
+    }
+
+    function finishGame() {
+      gameFinished = true;
+      acceptingAnswer = false;
+
+      cancelAnimationFrame(timerAnimationId);
+
+      selectedPoint = null;
+      correctPointToShow = null;
+
+      drawCoordinatePlane();
+
+      questionText.textContent = "10문제를 모두 풀었습니다.";
+      timeValue.textContent = "0.0초";
+      timeValue.classList.remove("warning");
+      currentValue.textContent = `${TOTAL_QUESTIONS} / ${TOTAL_QUESTIONS}`;
+      scoreValue.textContent = `${totalScore}점`;
+      remainingValue.textContent = "0문제";
+
+      feedback.textContent = "";
+      feedback.className = "feedback";
+
+      finalScore.textContent = `${totalScore}점`;
+      resultPanel.classList.add("visible");
+      canvas.classList.add("disabled");
+
+      saveLeaderboardRecord(totalScore);
+      renderLeaderboard();
+    }
+
+    function getLeaderboard() {
+      try {
+        const savedData = localStorage.getItem(LEADERBOARD_KEY);
+        if (!savedData) return [];
+
+        const parsed = JSON.parse(savedData);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        console.error("리더보드를 불러오지 못했습니다.", error);
+        return [];
+      }
+    }
+
+    function saveLeaderboardRecord(score) {
+      const records = getLeaderboard();
+
+      records.push({
+        score,
+        date: new Date().toISOString()
+      });
+
+      records.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+
+        return (
+          new Date(b.date).getTime() -
+          new Date(a.date).getTime()
+        );
+      });
+
+      const topRecords = records.slice(0, 10);
+
+      try {
+        localStorage.setItem(
+          LEADERBOARD_KEY,
+          JSON.stringify(topRecords)
+        );
+      } catch (error) {
+        console.error("리더보드를 저장하지 못했습니다.", error);
+      }
+    }
+
+    function formatRecordDate(isoDate) {
+      const date = new Date(isoDate);
+
+      return new Intl.DateTimeFormat("ko-KR", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(date);
+    }
+
+    function renderLeaderboard() {
+      const records = getLeaderboard();
+      leaderboardList.innerHTML = "";
+
+      if (records.length === 0) {
+        const emptyItem = document.createElement("li");
+        emptyItem.className = "empty-record";
+        emptyItem.textContent = "아직 등록된 기록이 없습니다.";
+        leaderboardList.appendChild(emptyItem);
+        return;
+      }
+
+      records.forEach((record, index) => {
+        const item = document.createElement("li");
+        item.className = "leaderboard-item";
+
+        const rank = document.createElement("span");
+        rank.className = "rank";
+        rank.textContent = `${index + 1}위`;
+
+        const date = document.createElement("span");
+        date.className = "record-date";
+        date.textContent = formatRecordDate(record.date);
+
+        const score = document.createElement("span");
+        score.className = "record-score";
+        score.textContent = `${record.score}점`;
+
+        item.append(rank, date, score);
+        leaderboardList.appendChild(item);
+      });
+    }
+
+    function resetLeaderboard() {
+      const shouldReset = window.confirm(
+        "리더보드 기록을 모두 삭제할까요?"
+      );
+
+      if (!shouldReset) return;
+
+      localStorage.removeItem(LEADERBOARD_KEY);
+      renderLeaderboard();
+    }
+
+    canvas.addEventListener("click", handleCanvasClick);
+    restartButton.addEventListener("click", startGame);
+    resetRecordButton.addEventListener("click", resetLeaderboard);
+
+    renderLeaderboard();
+    drawCoordinatePlane();
+    startGame();
+  </script>
+</body>
+</html>
